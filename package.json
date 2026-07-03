@@ -1,0 +1,40 @@
+{
+  "name": "cosmos-fs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Read-only virtual filesystem over Azure Cosmos DB for NoSQL (ls/cd/find/cat/grep).",
+  "bin": {
+    "cosmos-fs": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "packageManager": "pnpm@10.33.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run test/unit",
+    "verify": "pnpm run typecheck && pnpm run test",
+    "test:integration": "vitest run test/integration",
+    "test:e2e": "vitest run test/e2e --testTimeout=60000 --hookTimeout=180000",
+    "test:acceptance": "vitest run test/acceptance",
+    "build": "tsc -p tsconfig.build.json",
+    "cli": "tsx src/cli.ts",
+    "ingest": "tsx src/ingest.ts",
+    "seed:helpcenter": "tsx scripts/seed-helpcenter.ts"
+  },
+  "dependencies": {
+    "@azure/cosmos": "^4.9.3",
+    "@azure/identity": "^4.13.1",
+    "just-bash": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

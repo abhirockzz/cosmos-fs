@@ -1,0 +1,22 @@
+{
+  "indexingMode": "consistent",
+  "automatic": true,
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/content/*"
+    },
+    {
+      "path": "/\"_etag\"/?"
+    }
+  ],
+  "fullTextIndexes": [
+    {
+      "path": "/content"
+    }
+  ]
+}
