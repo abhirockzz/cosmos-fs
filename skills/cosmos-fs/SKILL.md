@@ -43,7 +43,7 @@ cannot write them all up front.
 ## Search efficiently
 
 For a term or phrase, prefer `grep -w` (combine flags freely: `grep -rwl`, `grep -rwil`). It
-uses the container's full-text index when one exists, so it stays cheap as the document set
+uses the container's full-text index when one exists, so it stays cost effective as the document set
 grows, and its results match a plain `grep -w`. Use plain `grep` (no `-w`) only for a
 partial-word match (like `config` inside `configuration`) or a regex, which read every page.
 When a whole-word search returns nothing, drop `-w` and search again before concluding the

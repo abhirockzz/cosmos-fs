@@ -1,13 +1,27 @@
 # cosmos-fs
 
-A read-only shell over a set of documents stored in Azure Cosmos DB for NoSQL. Explore your data
-(docs, code, notes, anything you ingest) with ordinary shell commands: `ls`, `cd`, `find`,
+A simple CLI tool to browse document content stored in Azure Cosmos DB. Explore your data
+(docs, notes, anything you ingest) with usual shell commands you know and love: `ls`, `cd`, `find`,
 `cat`, and `grep`.
 
-It maps onto what Cosmos DB does well: `ls`/`cd`/`find` traverse an in-memory tree built from
-one startup query, `cat` is a ~1-RU point read, and `grep` is a single query. Whole-word
-searches (`grep -w`) use a full-text index, so they stay cheap as your data grows. It is
-read-only: every write fails with `EROFS`, so it is safe to hand to an agent.
+## Where this fits
+
+When you need semantic search over your documents, vector or hybrid search is the right tool. `cosmos-fs` presents a container as a read-only folder of files that can be explored using shell commands. It's dead simple, so humans can use it. But so can AI Agents! In fact, `cosmos-fs` is built with agents in mind.
+
+`cosmos-fs` is just a terminal command, which is what makes it easy to hand to an agent. There's
+no SDK, MCP server, or API to set up. An agent already knows shell commands, so you point it at
+`cosmos-fs` and ask a question in plain language. It turns that into a search-then-read loop:
+`find` or `grep` to locate the pages that mention the topic, then `cat` to read the best match
+and answer from it. `cosmos-fs` ships with an [agent skill](skills/cosmos-fs/SKILL.md) that
+teaches these commands and the search-then-read loop, so you don't have to spell them out.
+
+Say you've ingested your product docs into Cosmos DB. Ask "how do I reset my password?" and the
+agent greps for `password`, reads the page that matches, and answers with a citation. Because
+`cosmos-fs` only ever reads, you can let it run on its own without risking your data.
+
+Under the hood, the shell comes from [just-bash](https://www.npmjs.com/package/just-bash), an
+in-memory bash written in TypeScript, and `cosmos-fs` supplies the filesystem behind it. The cost
+stays low and predictable: reading a page with `cat` is a point read of about 1 RU.
 
 ## Install
 

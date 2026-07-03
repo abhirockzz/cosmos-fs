@@ -38,13 +38,13 @@ already uses (see the two doors next).
   one read per file.
 - **`grep -w`:** whole-word search. `CONTAINS` is a partition scan whose cost grows with the
   document set; when the content field has a full-text index, `-w` uses it and fetches only
-  the matching pages, so it stays cheap at any size. Without the index it falls back to the
+  the matching pages, so it stays cost effective at any size. Without the index it falls back to the
   scan. The in-memory match keeps the result identical to a plain `grep -w` either way. Reach
   for plain `grep` when you need a partial-word or regex match.
 - **Read-only:** every write (`>`, `mkdir`, `rm`, ...) fails with `EROFS`, so cosmos-fs is
   safe to hand to an agent.
 
-**Cost:** the defaults stay cheap (single-partition access, point reads). If you map `key`
+**Cost:** the defaults stay cost effective (single-partition access, point reads). If you map `key`
 to a field that is not the id, `cat` still resolves through the index. If your scope is not
 the partition key, or you scan the whole container, queries run cross-partition: they still
 work, they just cost more.

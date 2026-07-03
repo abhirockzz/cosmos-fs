@@ -4,7 +4,7 @@ Glance-only board of what works, what's in flight, and what's planned. The how a
 [PLAN.md](../PLAN.md); non-obvious findings in [LEARNINGS.md](../LEARNINGS.md). This file tracks
 state only, so it should not repeat design detail (link instead).
 
-_Last updated: 2026-07-03. Phase 8 complete: a document-search product (schema rename, read-time field mapping, ingest writer + CLI, docs) plus dogfooded end-to-end quickstarts and task guides. Phase 9 (cheap `grep -w` via full-text index) in flight. See [PLAN.md](../PLAN.md)._
+_Last updated: 2026-07-03. Phase 8 complete: a document-search product (schema rename, read-time field mapping, ingest writer + CLI, docs) plus dogfooded end-to-end quickstarts and task guides. Phase 9 (cost-effective `grep -w` via full-text index) in flight. See [PLAN.md](../PLAN.md)._
 
 Status legend: **Done** · **Next** (in flight) · **Planned** · **Later** (optional).
 

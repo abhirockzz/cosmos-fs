@@ -48,13 +48,13 @@ cross-partition instead of single-partition.
 `grep -w` uses a full-text index only when your content field is the indexed path. A container
 cosmos-fs did not provision usually has no full-text index on its text field, so `grep -w`
 there scans like a plain grep (still correct, just not accelerated). Add a full-text index on
-that field to make whole-word searches cheap.
+that field to keep whole-word searches cost effective.
 
 ## Provision a container
 
 `scripts/provision.sh` creates the database and container: partition key `/namespace`, manual
 throughput, and an indexing policy that keeps `/content` out of the range index while
-full-text indexing it. The full-text index is what makes `grep -w` cheap; it is set at
+full-text indexing it. The full-text index is what keeps `grep -w` cost effective; it is set at
 container creation and cannot be added afterward, so recreate a container to gain it (this
 needs Azure CLI 2.87 or newer). The script is idempotent and uses your `az login` session.
 Override the targets with environment variables:

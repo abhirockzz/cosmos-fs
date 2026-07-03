@@ -67,7 +67,7 @@ and the [built-in role reference](https://learn.microsoft.com/azure/cosmos-db/re
 cosmos-fs is not published to npm yet, so build it from source and link it onto your PATH:
 
 ```bash
-git clone https://github.com/your-org/cosmos-fs.git
+git clone https://github.com/abhirockzz/cosmos-fs.git
 cd cosmos-fs
 pnpm install
 pnpm build      # compiles the binary to dist/cli.js

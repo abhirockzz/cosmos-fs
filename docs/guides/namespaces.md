@@ -76,7 +76,7 @@ guide/quotas.md
 ```
 
 Because a namespace is the partition key, each of these is a single-partition query: fast
-and cheap, with no chance of one set leaking into another's results.
+and cost effective, with no chance of one set leaking into another's results.
 
 ## Switch the default
 
@@ -99,7 +99,7 @@ into another set for one command.
 
 ## One container, or separate containers?
 
-Namespaces in one container are the simple default: cheap, isolated, and nothing extra to
+Namespaces in one container are the simple default: cost effective, isolated, and nothing extra to
 provision. Reach for separate containers only when a document set needs its own throughput,
 indexing policy, or access control.
 

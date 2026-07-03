@@ -117,12 +117,12 @@ runbooks/oncall.md
 
 `cat` reads the `body` field of exactly one item (a point read), even though the key is
 `docpath`, not the item id: cosmos-fs builds a `key -> id` index at startup so reads stay
-cheap.
+cost effective.
 
 `grep -w` works here too, but it only gets the full-text speed-up when your content field is
 the one with a full-text index. This example container has none on `body`, so `grep -w` scans
 like a plain search (correct, just not accelerated). Add a full-text index on your text field
-to make whole-word searches cheap at scale.
+to keep whole-word searches cost effective at scale.
 
 ## 4. Scope to one partition (optional)
 
@@ -143,7 +143,7 @@ cosmos-fs --content-field body --key-field docpath \
 ```
 
 The `internal` runbooks are gone. Because the scope is the real partition key, this query
-hits a single partition (cheaper). Scanning the whole container in step 3 is a
+hits a single partition (lower cost). Scanning the whole container in step 3 is a
 cross-partition query, which still works but costs more.
 
 ## 5. Stop repeating the flags

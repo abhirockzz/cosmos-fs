@@ -6,5 +6,8 @@ dist/
 
 internal/
 
+# Lavish review artifacts (local only)
+.lavish/
+
 # Bun compile artifacts
 *.bun-build

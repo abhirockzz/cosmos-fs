@@ -134,7 +134,7 @@ SHELL COMMANDS
   cat <path>              Print an item's full text (a ~1-RU point read).
   grep [-rwinlc] <pat> [p] Search item content; piped input is filtered too.
   grep -w <word>          Whole-word search. Uses the container's full-text index
-                          when it has one, so it stays cheap as the data grows;
+                          when it has one, so it stays cost effective as the data grows;
                           otherwise it scans. Plain grep does substring and regex.
   Pipes work: cat p | grep x, find . | grep y, ... | head / sort / wc -l.
 

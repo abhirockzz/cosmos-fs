@@ -55,9 +55,9 @@ The binary is the whole interface (no SDK required):
 
 - Pipes work: `find . | grep ...`, `cat p | grep ...`, `... | head / sort / wc -l`. Piped
   input is filtered instead of the document set.
-- Whole-word search is cheap: `grep -w` uses the container's full-text index when it has one,
+- Whole-word search is cost effective: `grep -w` uses the container's full-text index when it has one,
   so it stays fast as the document set grows. Plain `grep` scans for substrings and regex.
 - Read-only: any write fails with `EROFS`, so it is safe for automated use.
-- For why it stays cheap (point reads, one-query tree, coarse-to-fine grep), see
+- For why it stays cost effective (point reads, one-query tree, coarse-to-fine grep), see
   [concepts.md](concepts.md).
 

@@ -49,7 +49,7 @@ cosmos-fs -c "cat query/array-length.md"   # read the top hit for exact syntax +
 ```
 
 Shows: the full navigate -> search -> read loop. `-w` searches whole words through the
-container's full-text index, so it stays cheap as the set grows; without `-w`, `grep` pushes
+container's full-text index, so it stays cost effective as the set grows; without `-w`, `grep` pushes
 a coarse `CONTAINS` filter and scans. `cat` reads the winning page.
 
 ## 4. Other search shapes

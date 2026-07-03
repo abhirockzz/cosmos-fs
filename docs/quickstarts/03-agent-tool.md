@@ -22,7 +22,7 @@ shell-capable agent works the same way.
 
 ## How it works (optional)
 
-You don't need this to use the tool, but here is the shape of what usually happens.
+You don't need this to use the tool, but here is what usually happens.
 `cosmos-fs` is just a terminal command, so the agent first runs `cosmos-fs --help` to see
 what it can do, then explores on its own, roughly:
 
