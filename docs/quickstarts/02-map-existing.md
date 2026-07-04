@@ -121,8 +121,10 @@ cost effective.
 
 `grep -w` works here too, but it only gets the full-text speed-up when your content field is
 the one with a full-text index. This example container has none on `body`, so `grep -w` scans
-like a plain search (correct, just not accelerated). Add a full-text index on your text field
-to keep whole-word searches cost effective at scale.
+like a plain search (correct, just not accelerated). To accelerate it, index your text field:
+edit `scripts/cosmos-fulltext-policy.json` so the path matches your content field (here `/body`,
+not the default `/content`) before creating the container. The path must match the mapped
+content field or the speed-up never kicks in.
 
 ## 4. Scope to one partition (optional)
 

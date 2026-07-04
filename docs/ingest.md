@@ -56,8 +56,11 @@ that field to keep whole-word searches cost effective.
 throughput, and an indexing policy that keeps `/content` out of the range index while
 full-text indexing it. The full-text index is what keeps `grep -w` cost effective; it is set at
 container creation and cannot be added afterward, so recreate a container to gain it (this
-needs Azure CLI 2.87 or newer). The script is idempotent and uses your `az login` session.
-Override the targets with environment variables:
+needs Azure CLI 2.87 or newer). The shipped `scripts/cosmos-fulltext-policy.json` indexes
+`/content`, matching the default content field. If you index a different field — a non-default
+`--content-field`, or a full-text index you create by hand (portal, CLI, or SDK) — set the path
+to match it (e.g. `/body`), or `grep -w` falls back to an unaccelerated scan. The script is
+idempotent and uses your `az login` session. Override the targets with environment variables:
 
 ```bash
 COSMOS_ACCOUNT=my-account COSMOS_RG=my-resource-group \

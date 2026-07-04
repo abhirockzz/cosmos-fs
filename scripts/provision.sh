@@ -21,7 +21,10 @@ THROUGHPUT="${COSMOS_THROUGHPUT:-1000}"
 IDX_FILE="$(cd "$(dirname "$0")" && pwd)/cosmos-indexing-policy.json"
 # Full-text policy makes `grep -w` index-accelerated (see PLAN.md Phase 9). It is
 # immutable — set only at container creation — and needs az CLI >= 2.87 for the
-# --full-text-policy flag.
+# --full-text-policy flag. The shipped policy indexes `/content`, matching the default
+# content field. If your content field differs (e.g. mapping an existing container with
+# --content-field body), edit cosmos-fulltext-policy.json to that path (e.g. `/body`)
+# before creating the container, or `grep -w` won't be accelerated.
 FT_FILE="$(cd "$(dirname "$0")" && pwd)/cosmos-fulltext-policy.json"
 
 if [[ -z "$ACCOUNT" || -z "$RESOURCE_GROUP" ]]; then
