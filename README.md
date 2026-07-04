@@ -10,9 +10,7 @@ A simple CLI tool to browse document content stored in Azure Cosmos DB. Explore 
 `cat`, and `grep`.
 
 <p align="center">
-  <img src="docs/media/agent-run.png" alt="Copilot in Agent mode answering 'how does autoscale throughput scale up and down?' by running cosmos-fs commands (ls, grep, cat) against Cosmos DB docs and citing autoscale-throughput.md" width="820" />
-  <br />
-  <em>Ask in plain language; the agent runs read-only <code>cosmos-fs</code> commands and answers from your docs.</em>
+  <img src="assets/cosmos-fs-hero.svg" alt="How cosmos-fs works: ingest your documents into an Azure Cosmos DB container with 'cosmos-fs ingest', then explore that container read-only like a folder of files using ls, cd, find, cat, and grep." width="900" />
 </p>
 
 ## Where this fits
@@ -29,6 +27,12 @@ agent greps for `password`, reads the page that matches, and answers with a cita
 `cosmos-fs` only ever reads, you can let it run on its own without risking your data.
 
 > Under the hood, the shell comes from [just-bash](https://www.npmjs.com/package/just-bash), an in-memory bash written in TypeScript, and `cosmos-fs` supplies the filesystem behind it.
+
+<p align="center">
+  <img src="docs/media/agent-run.png" alt="Copilot in Agent mode answering 'how does autoscale throughput scale up and down?' by running cosmos-fs commands (ls, grep, cat) against Cosmos DB docs and citing autoscale-throughput.md" width="820" />
+  <br />
+  <em>Ask in plain language; the agent runs read-only <code>cosmos-fs</code> commands and answers from your docs.</em>
+</p>
 
 ## Get started
 
