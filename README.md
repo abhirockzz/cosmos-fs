@@ -83,4 +83,3 @@ and [mapping](docs/quickstarts/02-map-existing.md) have the details.
 - [docs/ingest.md](docs/ingest.md): provision and load your own data.
 - [docs/guides/namespaces.md](docs/guides/namespaces.md): separate document sets with namespaces.
 - [docs/guides/pdfs.md](docs/guides/pdfs.md): convert and ingest PDF content.
-- [docs/status.md](docs/status.md): what works today.
