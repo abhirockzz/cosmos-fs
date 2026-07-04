@@ -41,6 +41,11 @@ already uses (see the two doors next).
   the matching pages, so it stays cost effective at any size. Without the index it falls back to the
   scan. The in-memory match keeps the result identical to a plain `grep -w` either way. Reach
   for plain `grep` when you need a partial-word or regex match.
+- **Everything else:** `info` reports the resolved connection and field mapping (no network),
+  and the standard read-only text tools (`head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `nl`,
+  `sed`, `awk`, `jq`, `yq`, ...) all run in memory over piped output. Run `help` to list them
+  and `<cmd> --help` for usage. None of them touch Cosmos: the only commands that ever query
+  it are `cat`, `grep`, and the one-time startup build, so everything else adds 0 RU.
 - **Read-only:** every write (`>`, `mkdir`, `rm`, ...) fails with `EROFS`, so cosmos-fs is
   safe to hand to an agent.
 

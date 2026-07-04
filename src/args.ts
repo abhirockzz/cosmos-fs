@@ -19,8 +19,8 @@ export interface ConfigOverrides {
 export type ParsedArgs =
     | { kind: "help" }
     | { kind: "version" }
-    | { kind: "run"; command: string; overrides: ConfigOverrides }
-    | { kind: "repl"; overrides: ConfigOverrides }
+    | { kind: "run"; command: string; overrides: ConfigOverrides; showRu: boolean }
+    | { kind: "repl"; overrides: ConfigOverrides; showRu: boolean }
     | { kind: "ingest"; folder: string; overrides: ConfigOverrides }
     | { kind: "error"; message: string };
 
@@ -50,6 +50,10 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
     const overrides: ConfigOverrides = {};
     let command: string | undefined;
+    // The per-session RU total prints by default; --no-ru suppresses it. It is a
+    // presentation choice for the explore path, not corpus config, so it rides
+    // alongside overrides rather than in them (and is a no-op for ingest).
+    let showRu = true;
 
     // `ingest <folder>` is a subcommand: the first token selects the writer mode,
     // then a single positional names the local folder to upload.
@@ -66,6 +70,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
                 return { kind: "error", message: `${token} requires a command` };
             }
             command = value;
+            continue;
+        }
+
+        if (!ingestMode && token === "--no-ru") {
+            showRu = false;
             continue;
         }
 
@@ -111,8 +120,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
 
     return command !== undefined
-        ? { kind: "run", command, overrides }
-        : { kind: "repl", overrides };
+        ? { kind: "run", command, overrides, showRu }
+        : { kind: "repl", overrides, showRu };
 }
 
 /** Full `--help` text. This is the primary usage doc; keep it self-contained. */
@@ -130,6 +139,8 @@ USAGE
   ${bin} --version        Show the version.
 
 SHELL COMMANDS
+  info                    Print this session's resolved connection, file count,
+                          and field mapping (no network, ~0 RU).
   ls / cd / find          Navigate the document set like files and directories.
   cat <path>              Print an item's full text (a ~1-RU point read).
   grep [-rwinlc] <pat> [p] Search item content; piped input is filtered too.
@@ -137,6 +148,13 @@ SHELL COMMANDS
                           when it has one, so it stays cost effective as the data grows;
                           otherwise it scans. Plain grep does substring and regex.
   Pipes work: cat p | grep x, find . | grep y, ... | head / sort / wc -l.
+  Plus the standard read-only text toolkit (tail, uniq, cut, tr, nl, sed, awk,
+  jq, yq, ...). Run \`help\` to list commands and \`<cmd> --help\` for usage.
+
+COST (what touches Cosmos)
+  Only \`cat\`, \`grep\`, and the one-time startup build ever query Cosmos. \`ls\`/\`cd\`/
+  \`find\` resolve from the in-memory tree and every other text tool runs over piped
+  output, so they add 0 RU. The per-session RU total prints on exit (--no-ru hides it).
 
 CONFIG (precedence: flag > env var > .env > default)
   --endpoint <url>        Cosmos account endpoint      (COSMOS_ENDPOINT, required)
@@ -144,6 +162,7 @@ CONFIG (precedence: flag > env var > .env > default)
   --container <name>      Container                    (COSMOS_CONTAINER, required)
   --namespace <name>      Document set in the container (COSMOS_FS_NAMESPACE)
   Auth: Azure AD via \`az login\` (DefaultAzureCredential); no keys.
+  --no-ru                 Don't print the per-session RU total (shown on stderr by default).
 
 MAPPING (explore an existing container by binding roles to its fields)
   --content-field <path>  Field holding item text      (COSMOS_FS_CONTENT_FIELD, default: content)

@@ -1,7 +1,8 @@
 # cosmos-fs CLI
 
 A read-only shell over a set of documents stored in Azure Cosmos DB. Explore whatever
-you ingested (docs, code, notes, anything) with `ls`, `cd`, `find`, `cat`, and `grep`.
+you ingested (docs, code, notes, anything) with `ls`, `cd`, `find`, `cat`, and `grep`,
+plus `info` to see what this session is connected to.
 
 **`cosmos-fs --help` is the full reference.** This page is the short version. New to
 cosmos-fs? [concepts.md](concepts.md) explains the model.
@@ -53,6 +54,15 @@ The binary is the whole interface (no SDK required):
 
 ## Notes
 
+- `info` prints the resolved connection (endpoint, database, container, namespace), the
+  file count, and how item roles map to fields — handy in one-shot mode where the REPL
+  banner isn't shown.
+- Beyond `ls`/`cd`/`find`/`cat`/`grep`, the standard read-only text toolkit is available
+  (`head`, `tail`, `sort`, `uniq`, `cut`, `tr`, `nl`, `wc`, `sed`, `awk`, `jq`, `yq`, ...).
+  Run `help` to list commands and `<cmd> --help` for usage. Writes are the only thing
+  disabled (they fail with `EROFS`).
+- Cost: only `cat`, `grep`, and the one-time startup build query Cosmos. `ls`/`cd`/`find`
+  and every other text tool run in memory over piped output, so they add 0 RU.
 - Pipes work: `find . | grep ...`, `cat p | grep ...`, `... | head / sort / wc -l`. Piped
   input is filtered instead of the document set.
 - Whole-word search is cost effective: `grep -w` uses the container's full-text index when it has one,
