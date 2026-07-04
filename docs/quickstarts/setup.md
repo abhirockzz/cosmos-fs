@@ -97,13 +97,14 @@ Edit `.env`:
 
 ```bash
 COSMOS_ENDPOINT=https://<your-account>.documents.azure.com:443/
-COSMOS_DATABASE=docs        # default; any database name
-COSMOS_CONTAINER=pages      # default; any container name
+COSMOS_DATABASE=docs        # required; the name provision.sh creates
+COSMOS_CONTAINER=pages      # required; the name provision.sh creates
 # COSMOS_FS_NAMESPACE is set per document set in each quickstart.
 ```
 
-Only `COSMOS_ENDPOINT` is required; `COSMOS_DATABASE` and `COSMOS_CONTAINER` default to
-`docs` and `pages`. `cosmos-fs --help` lists every setting.
+`COSMOS_ENDPOINT`, `COSMOS_DATABASE`, and `COSMOS_CONTAINER` are all required (there is no
+default database or container name). `docs` and `pages` are what `provision.sh` creates, so
+keep them unless you used different names. `cosmos-fs --help` lists every setting.
 
 ## Troubleshooting
 
@@ -112,6 +113,8 @@ Only `COSMOS_ENDPOINT` is required; `COSMOS_DATABASE` and `COSMOS_CONTAINER` def
   take a short while to propagate.
 - **`Missing Cosmos endpoint`** No `COSMOS_ENDPOINT` was found. Set it in `.env` or pass
   `--endpoint`.
+- **`Missing Cosmos database` / `Missing Cosmos container`** These have no default. Set
+  `COSMOS_DATABASE` / `COSMOS_CONTAINER` in `.env`, or pass `--database` / `--container`.
 - **`az login` opens no browser** Use `az login --use-device-code`.
 
 Next: [Index your own docs](01-index-your-docs.md).

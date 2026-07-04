@@ -56,6 +56,22 @@ function resolveConnectTimeoutMs(raw: string | undefined): number {
 }
 
 /**
+ * Resolve a required target field (database or container). Unlike the field
+ * mapping, these have no default: an unset or blank value throws a clear,
+ * actionable error instead of falling back to a fixed name and pointing the
+ * user at a container they never chose (which would surface as an empty or
+ * wrong corpus).
+ */
+function requireTarget(value: string | undefined, label: string, envVar: string, flag: string): string {
+    if (!value || value.trim() === "") {
+        throw new Error(
+            `Missing Cosmos ${label}: set ${envVar}, pass ${flag}, or copy .env.example to .env`,
+        );
+    }
+    return value;
+}
+
+/**
  * Config for opening/exploring a corpus: which Cosmos account/database/container,
  * which `namespace` (scope) within it, and how the item roles map to fields. This
  * is all the CLI/engine needs — it never depends on how or from where the data was
@@ -72,11 +88,23 @@ export function loadCorpusConfig(
             "Missing Cosmos endpoint: set COSMOS_ENDPOINT, pass --endpoint, or copy .env.example to .env",
         );
     }
+    const database = requireTarget(
+        overrides.database ?? process.env.COSMOS_DATABASE,
+        "database",
+        "COSMOS_DATABASE",
+        "--database",
+    );
+    const container = requireTarget(
+        overrides.container ?? process.env.COSMOS_CONTAINER,
+        "container",
+        "COSMOS_CONTAINER",
+        "--container",
+    );
     const namespace = overrides.namespace ?? process.env.COSMOS_FS_NAMESPACE;
     return {
         endpoint,
-        database: overrides.database ?? process.env.COSMOS_DATABASE ?? "docs",
-        container: overrides.container ?? process.env.COSMOS_CONTAINER ?? "pages",
+        database,
+        container,
         // Empty/whitespace means "no scope" (whole container), so a user can
         // override a configured COSMOS_FS_NAMESPACE with `--namespace ''` when
         // pointing at a container that isn't scoped by a namespace field.

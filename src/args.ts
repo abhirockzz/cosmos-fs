@@ -139,9 +139,9 @@ SHELL COMMANDS
   Pipes work: cat p | grep x, find . | grep y, ... | head / sort / wc -l.
 
 CONFIG (precedence: flag > env var > .env > default)
-  --endpoint <url>        Cosmos account endpoint      (COSMOS_ENDPOINT)
-  --database <name>       Database                     (COSMOS_DATABASE, default: docs)
-  --container <name>      Container                    (COSMOS_CONTAINER, default: pages)
+  --endpoint <url>        Cosmos account endpoint      (COSMOS_ENDPOINT, required)
+  --database <name>       Database                     (COSMOS_DATABASE, required)
+  --container <name>      Container                    (COSMOS_CONTAINER, required)
   --namespace <name>      Document set in the container (COSMOS_FS_NAMESPACE)
   Auth: Azure AD via \`az login\` (DefaultAzureCredential); no keys.
 

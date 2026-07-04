@@ -22,7 +22,9 @@ export interface CliResult {
 export function cli(args: string[], env: NodeJS.ProcessEnv = {}): CliResult {
     const res = spawnSync("node", ["dist/cli.js", ...args], {
         encoding: "utf8",
-        env: { ...process.env, ...env },
+        // database is required now, so pass it explicitly (defaults to `docs`)
+        // rather than relying on the spawned CLI picking it up from .env.
+        env: { ...process.env, COSMOS_DATABASE: DB, ...env },
     });
     return { stdout: res.stdout ?? "", stderr: res.stderr ?? "", code: res.status ?? 1 };
 }

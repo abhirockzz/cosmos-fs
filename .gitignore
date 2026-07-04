@@ -11,3 +11,4 @@ internal/
 
 # Bun compile artifacts
 *.bun-build
+.impeccable/
