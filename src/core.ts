@@ -155,7 +155,7 @@ export async function openCorpus(
         shape = await withTimeout(
             readContainerShape(container, meter),
             timeoutMs,
-            `couldn't reach ${hostOf(config.endpoint)} within ${timeoutMs} ms — check --endpoint and your network, or raise --connect-timeout.`,
+            `couldn't reach ${hostOf(config.endpoint)} within ${timeoutMs} ms — check --endpoint and your network, or raise the timeout via COSMOS_FS_CONNECT_TIMEOUT (seconds).`,
         );
     } catch (err) {
         throw describeConnectError(err, config);
