@@ -63,6 +63,9 @@ The binary is the whole interface (no SDK required):
   disabled (they fail with `EROFS`).
 - Cost: only `cat`, `grep`, and the one-time startup build query Cosmos. `ls`/`cd`/`find`
   and every other text tool run in memory over piped output, so they add 0 RU.
+- Every run prints a one-line RU total to **stderr** on exit (e.g. `cosmos-fs: session used
+  1.03 RU.`). It never touches stdout, so it won't pollute piped or parsed output. Pass
+  `--no-ru` to hide it.
 - Pipes work: `find . | grep ...`, `cat p | grep ...`, `... | head / sort / wc -l`. Piped
   input is filtered instead of the document set.
 - Whole-word search is cost effective: `grep -w` uses the container's full-text index when it has one,
