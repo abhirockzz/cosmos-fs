@@ -15,3 +15,5 @@ internal/
 
 # Agent scenario eval scratchpad (local only)
 evals/
+
+agent-skill-test-manual/

@@ -23,15 +23,21 @@ Answering a real question usually takes several commands: you search, read what 
 often search again with a sharper term. Each command depends on the previous output, so you
 cannot write them all up front.
 
-- (Recommended) Interactive, `cosmos-fs` with no `-c`: opens one shell for the whole exploration. The file
-  tree is built once, the working directory persists, and you send commands as you decide
-  them. Prefer this for anything beyond a single command, whenever your runtime can keep a
-  shell open and send commands to it.
-- One-shot, `cosmos-fs -c "<command>"`: runs a single command and exits with its code. Each
-  call is independent, so it builds the tree and signs in again, and the working directory
-  starts at the root. Use it for a single command, or when your runtime only runs isolated
-  commands. You can chain a *fixed* sequence with `&&` (`cosmos-fs -c "cd query && ls"`), but a
-  search-then-read flow cannot be chained: the page you read depends on what the search returns.
+**Default to interactive.** Use one-shot (`-c`) only when (a) you have exactly one command, or
+(b) your runtime cannot keep a shell open. If you will read any page after a search, you already
+need interactive, so start there.
+
+- (Default) Interactive, `cosmos-fs` with no `-c`: opens one shell for the whole exploration. The
+  file tree is built once, sign-in happens once, and the working directory persists. Launch it
+  once, keep the shell open, and send commands into it one at a time as you decide them (search,
+  read the output, then send the next command). This is the right choice for any search-then-read
+  flow.
+- One-shot, `cosmos-fs -c "<command>"`: runs a single command and exits with its code. Each call
+  is independent, so it rebuilds the tree and re-authenticates every time, and the working
+  directory resets to the root. N one-shot calls pay that startup cost N times. Use it for a
+  single command, or when your runtime only runs isolated commands. You can chain a *fixed*
+  sequence with `&&` (`cosmos-fs -c "cd query && ls"`), but a search-then-read flow cannot be
+  chained: the page you read depends on what the search returns.
 
 ## What you can rely on
 
