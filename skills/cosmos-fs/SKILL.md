@@ -9,35 +9,33 @@ description: Explore and search a document set stored in Azure Cosmos DB through
 item is a file, and you browse and search with `ls`, `cd`, `find`, `cat`, and `grep`,
 reading whole pages.
 
-## Before you start
+## Running cosmos-fs
 
-- Run `cosmos-fs --help` once to see the commands and configuration.
-- It needs an Azure sign-in (`az login`) and a target container set in the environment,
-  a `.env` file, or flags (`--endpoint`, `--database`, `--container`, `--namespace`).
-- If a command fails with an auth or permission error, tell the user to run `az login`
-  and confirm they have Cosmos data-plane access. Do not retry blindly.
+`cosmos-fs` needs an Azure sign-in (`az login`) and its target passed as flags. Every
+invocation follows one canonical form:
 
-## Two ways to run
+```text
+cosmos-fs --endpoint <url> --database <db> --container <c> --namespace <ns> [-c "<command>"]
+```
 
-Answering a real question usually takes several commands: you search, read what matched, and
-often search again with a sharper term. Each command depends on the previous output, so you
-cannot write them all up front.
+Answering a question usually takes several commands: search, read what matched, then search
+again with a sharper term. Each depends on the previous output, so **default to interactive** —
+launch once with the flags above and keep the shell open, sending commands one at a time. The
+launch command carries the flags; the commands you send into the shell afterward are bare. Use
+one-shot (`-c "<command>"`) only for a single command or when your runtime cannot keep a shell
+open; it re-authenticates and rebuilds the tree on every call, and you must repeat the full flag
+set each time (a bare `cosmos-fs -c "ls"` runs against the wrong or empty scope).
 
-**Default to interactive.** Use one-shot (`-c`) only when (a) you have exactly one command, or
-(b) your runtime cannot keep a shell open. If you will read any page after a search, you already
-need interactive, so start there.
+Constraints:
 
-- (Default) Interactive, `cosmos-fs` with no `-c`: opens one shell for the whole exploration. The
-  file tree is built once, sign-in happens once, and the working directory persists. Launch it
-  once, keep the shell open, and send commands into it one at a time as you decide them (search,
-  read the output, then send the next command). This is the right choice for any search-then-read
-  flow.
-- One-shot, `cosmos-fs -c "<command>"`: runs a single command and exits with its code. Each call
-  is independent, so it rebuilds the tree and re-authenticates every time, and the working
-  directory resets to the root. N one-shot calls pay that startup cost N times. Use it for a
-  single command, or when your runtime only runs isolated commands. You can chain a *fixed*
-  sequence with `&&` (`cosmos-fs -c "cd query && ls"`), but a search-then-read flow cannot be
-  chained: the page you read depends on what the search returns.
+- **Flags are the only configuration source.** Do not read or search for env vars or a `.env`
+  file (no `cat .env`, `printenv`, `echo $COSMOS_*`, `ls -a`), and ignore the CONFIG / `.env`
+  hints in `--help`. If you are missing a flag value, ask the user for it.
+- **Ignore env/`.env` advice in errors.** If a command fails with a "Missing Cosmos ..." error
+  that suggests setting a `COSMOS_*` variable or copying `.env.example` to `.env`, add the
+  missing flag and rerun instead.
+- **On auth or permission errors, do not retry blindly.** Tell the user to run `az login` and
+  confirm they have Cosmos data-plane access.
 
 ## What you can rely on
 
@@ -45,6 +43,9 @@ need interactive, so start there.
   run in an autonomous loop, so never attempt to modify data.
 - Output contract: stdout is data, stderr is diagnostics, and the exit code follows the
   command. Read stdout for results.
+- Session RU total: when the session ends (shell exit/EOF, or after a `-c` one-shot) a
+  one-line request-unit total prints to stderr. It is a diagnostic, never on stdout, so it
+  does not affect result parsing. Pass `--no-ru` to suppress it.
 
 ## Search efficiently
 
@@ -58,8 +59,7 @@ term is absent.
 ## Worked examples
 
 Each starts from a user question in natural language. You do not know the path, so search for
-a likely term, read the top hit, then answer and cite it. All commands and output below are
-real (shown as an interactive session; in one-shot mode prefix each with `cosmos-fs -c`).
+a likely term, read the top hit, then answer and cite it.
 
 **"How do I get an array's length in a NoSQL query?"** — one page matches, read its syntax:
 

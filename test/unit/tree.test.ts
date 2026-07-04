@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Container } from "@azure/cosmos";
 import { buildMapping } from "../../src/mapping.js";
+import { RuMeter } from "../../src/ru.js";
 import { buildCorpusIndex, DirTree } from "../../src/tree.js";
 
 describe("DirTree", () => {
@@ -78,12 +79,13 @@ describe("DirTree", () => {
 function fakeContainer(
     rows: Array<{ id: string; k?: string; pk: unknown }>,
     capture?: (arg: { query: string; parameters: unknown[] }, opts: unknown) => void,
+    requestCharge?: number,
 ): Container {
     return {
         items: {
             query(arg: { query: string; parameters: unknown[] }, opts: unknown) {
                 capture?.(arg, opts);
-                return { fetchAll: async () => ({ resources: rows }) };
+                return { fetchAll: async () => ({ resources: rows, requestCharge }) };
             },
         },
     } as unknown as Container;
@@ -135,5 +137,17 @@ describe("buildCorpusIndex", () => {
         expect(tree.filePaths()).toEqual(["/doc-2", "/guide/oauth"]);
         expect(refs.get("/guide/oauth")).toEqual({ id: "doc-1", pk: "doc-1" });
         expect(refs.get("/doc-2")).toEqual({ id: "doc-2", pk: "doc-2" });
+    });
+
+    it("records the tree-build query's request charge on the meter", async () => {
+        const meter = new RuMeter();
+        const container = fakeContainer(
+            [{ id: "id-a", k: "overview.md", pk: "ns" }],
+            undefined,
+            3.14,
+        );
+        const mapping = buildMapping({ pkField: "namespace", namespaceValue: "ns" });
+        await buildCorpusIndex(container, mapping, meter);
+        expect(meter.total).toBeCloseTo(3.14, 5);
     });
 });

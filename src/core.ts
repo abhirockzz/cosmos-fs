@@ -6,6 +6,7 @@ import { type CosmosTarget, createContainer } from "./cosmos.js";
 import { createGrepCommand } from "./grep.js";
 import { createInfoCommand } from "./info.js";
 import { buildMapping, pkPathToField } from "./mapping.js";
+import { RuMeter } from "./ru.js";
 import { buildCorpusIndex } from "./tree.js";
 
 /** Everything the explore engine needs: which container, which corpus, and how its fields map. */
@@ -36,6 +37,13 @@ export interface ExecResult {
  */
 export interface Session {
     exec(command: string, options?: { cwd?: string }): Promise<ExecResult>;
+    /**
+     * Total request units (RU) this session has charged to Cosmos so far: the
+     * startup shape read and tree build, plus every `cat` point read and `grep`
+     * coarse filter. Structural commands (`ls`/`cd`/`find`) add nothing. The CLI
+     * reports this once the session ends.
+     */
+    ruTotal(): number;
 }
 
 /** Default budget (ms) for the startup connectivity probe when config omits one. */
@@ -105,8 +113,10 @@ interface ContainerShape {
  * hierarchical (multi-path) partition keys are out of scope and throw a clear
  * error rather than silently mis-routing reads.
  */
-async function readContainerShape(container: Container): Promise<ContainerShape> {
-    const { resource } = await container.read();
+async function readContainerShape(container: Container, meter?: RuMeter): Promise<ContainerShape> {
+    const response = await container.read();
+    meter?.add(response.requestCharge);
+    const resource = response.resource;
     const paths = resource?.partitionKey?.paths ?? [];
     if (paths.length > 1) {
         throw new Error(
@@ -137,10 +147,13 @@ export async function openCorpus(
 ): Promise<Session> {
     const container = createContainer(config, options.credential);
     const timeoutMs = config.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS;
+    // One meter per session: every Cosmos response below feeds its requestCharge
+    // in, and ruTotal() reports the running sum for the CLI to print on exit.
+    const meter = new RuMeter();
     let shape: ContainerShape;
     try {
         shape = await withTimeout(
-            readContainerShape(container),
+            readContainerShape(container, meter),
             timeoutMs,
             `couldn't reach ${hostOf(config.endpoint)} within ${timeoutMs} ms — check --endpoint and your network, or raise --connect-timeout.`,
         );
@@ -155,16 +168,16 @@ export async function openCorpus(
         pkField: shape.pkField,
         fullTextIndexPaths: shape.fullTextIndexPaths,
     });
-    const { tree, refs } = await buildCorpusIndex(container, mapping);
+    const { tree, refs } = await buildCorpusIndex(container, mapping, meter);
     const bash = new Bash({
-        fs: new CosmosFs(tree, container, mapping, refs),
+        fs: new CosmosFs(tree, container, mapping, refs, meter),
         cwd: "/",
         // Override the built-in grep (which would point-read every page) with a
         // Cosmos coarse-filter + in-memory fine match. See src/grep.ts. `info`
         // reports the resolved connection/mapping so a session can confirm its
         // target from inside the shell (and via `-c "info"`).
         customCommands: [
-            createGrepCommand(container, mapping, tree),
+            createGrepCommand(container, mapping, tree, meter),
             createInfoCommand(config, mapping, tree),
         ],
         // just-bash's defense-in-depth blocks globalThis.setTimeout during command
@@ -185,6 +198,9 @@ export async function openCorpus(
                 // successful `cd` landed for the caller to thread back in.
                 cwd: result.env.PWD ?? cwd,
             };
+        },
+        ruTotal() {
+            return meter.total;
         },
     };
 }

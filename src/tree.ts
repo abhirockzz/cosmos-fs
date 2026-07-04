@@ -1,6 +1,7 @@
 import type { Container, PartitionKey } from "@azure/cosmos";
 import { posix } from "node:path";
 import { type ReaderMapping, scopeParts } from "./mapping.js";
+import type { RuMeter } from "./ru.js";
 
 const ROOT = "/";
 
@@ -107,15 +108,18 @@ export interface CorpusIndex {
 export async function buildCorpusIndex(
     container: Container,
     mapping: ReaderMapping,
+    meter?: RuMeter,
 ): Promise<CorpusIndex> {
     const { conditions, parameters, partitionKey } = scopeParts(mapping);
     const where = conditions.length > 0 ? ` WHERE ${conditions.join(" AND ")}` : "";
     const query = `SELECT c.id, ${mapping.keyExpr} AS k, ${mapping.pkExpr} AS pk FROM c${where}`;
     const feedOptions = partitionKey !== undefined ? { partitionKey } : {};
 
-    const { resources } = await container.items
+    const response = await container.items
         .query<{ id: string; k?: string; pk: PartitionKey }>({ query, parameters }, feedOptions)
         .fetchAll();
+    meter?.add(response.requestCharge);
+    const { resources } = response;
 
     const keys: string[] = [];
     const refs = new Map<string, PointRef>();

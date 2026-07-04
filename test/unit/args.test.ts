@@ -6,7 +6,7 @@ import { type ParsedArgs, parseArgs } from "../../src/args.js";
 // and the footgun errors a user or agent is likely to hit.
 describe("parseArgs", () => {
     it("defaults to an interactive REPL with no args", () => {
-        expect(parseArgs([])).toEqual({ kind: "repl", overrides: {} });
+        expect(parseArgs([])).toEqual({ kind: "repl", overrides: {}, showRu: true });
     });
 
     it("recognizes --help / -h (and it wins over other tokens)", () => {
@@ -25,11 +25,13 @@ describe("parseArgs", () => {
             kind: "run",
             command: "ls query",
             overrides: {},
+            showRu: true,
         });
         expect(parseArgs(["--command", "cat overview.md"])).toEqual({
             kind: "run",
             command: "cat overview.md",
             overrides: {},
+            showRu: true,
         });
     });
 
@@ -38,6 +40,17 @@ describe("parseArgs", () => {
             kind: "run",
             command: "grep -rn 'x' . | head",
             overrides: {},
+            showRu: true,
+        });
+    });
+
+    it("suppresses the RU total with --no-ru (REPL and one-shot)", () => {
+        expect(parseArgs(["--no-ru"])).toEqual({ kind: "repl", overrides: {}, showRu: false });
+        expect(parseArgs(["--no-ru", "-c", "ls"])).toEqual({
+            kind: "run",
+            command: "ls",
+            overrides: {},
+            showRu: false,
         });
     });
 
@@ -52,10 +65,12 @@ describe("parseArgs", () => {
             kind: "run",
             command: "ls",
             overrides: { endpoint: "https://x/", namespace: "s" },
+            showRu: true,
         });
         expect(parseArgs(["--database=mydb", "--container=items"])).toEqual({
             kind: "repl",
             overrides: { database: "mydb", container: "items" },
+            showRu: true,
         });
     });
 

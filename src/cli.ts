@@ -44,7 +44,7 @@ function connectionLine(config: ReturnType<typeof loadCorpusConfig>): string {
     return `connected to ${host}  db=${config.database}  container=${config.container}  namespace=${scope}`;
 }
 
-async function repl(session: Session, config: ReturnType<typeof loadCorpusConfig>): Promise<void> {
+async function repl(session: Session, config: ReturnType<typeof loadCorpusConfig>, showRu: boolean): Promise<void> {
     // Iterating the interface line-by-line ends cleanly on EOF, so it works both
     // for interactive typing (ends on Ctrl-D) and for piped/scripted input
     // (ends when the stream closes) without racing the last command's output.
@@ -77,6 +77,22 @@ async function repl(session: Session, config: ReturnType<typeof loadCorpusConfig
         }
     }
     rl.close();
+    if (showRu) {
+        writeRuSummary(session);
+    }
+}
+
+/**
+ * One-line session RU total to stderr (diagnostics, never stdout, so it never
+ * pollutes parseable output). Prints once the session ends: on REPL exit/EOF and
+ * after a one-shot command. The total spans the whole session (startup shape read
+ * and tree build plus every `cat`/`grep`), which for a one-shot `-c` run is
+ * dominated by the one-time build. Rounded to 2 decimals with trailing zeros
+ * dropped (`Number(...toFixed(2))`).
+ */
+function writeRuSummary(session: Session): void {
+    const total = Number(session.ruTotal().toFixed(2));
+    stderr.write(`${BIN_NAME}: session used ${total} RU.\n`);
 }
 
 /** Read the package version for `--version` (best-effort). */
@@ -180,9 +196,12 @@ async function main(): Promise<void> {
     const session = await openCorpus(config);
     if (parsed.kind === "run") {
         const [exitCode] = await run(session, parsed.command, "/");
+        if (parsed.showRu) {
+            writeRuSummary(session);
+        }
         process.exit(exitCode);
     }
-    await repl(session, config);
+    await repl(session, config, parsed.showRu);
 }
 
 /**

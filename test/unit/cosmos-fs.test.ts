@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Container } from "@azure/cosmos";
 import { CosmosFs } from "../../src/cosmos-fs.js";
 import { buildMapping } from "../../src/mapping.js";
+import { RuMeter } from "../../src/ru.js";
 import { DirTree } from "../../src/tree.js";
 
 // Direct coverage for the high-risk adapter. The parity oracle (integration)
@@ -110,6 +111,51 @@ describe("CosmosFs content reads guard before touching Cosmos", () => {
         const fs = makeFs();
         await expect(fs.readFile("/nope.md")).rejects.toThrow(/ENOENT.*open '\/nope.md'/);
         await expect(fs.readFileBuffer("/nope.md")).rejects.toThrow(/ENOENT/);
+    });
+});
+
+// A container whose point read returns canned content plus a fixed requestCharge,
+// so we can assert the meter records exactly what cat costs — and nothing when a
+// command never touches Cosmos.
+function readableContainer(requestCharge: number): Container {
+    return {
+        item() {
+            return {
+                async read() {
+                    return { resource: { content: "hello" }, requestCharge };
+                },
+            };
+        },
+    } as unknown as Container;
+}
+
+describe("CosmosFs feeds cat's point-read charge to the meter", () => {
+    it("records the point read's request charge on readFile", async () => {
+        const meter = new RuMeter();
+        const fs = new CosmosFs(
+            new DirTree(["overview.md"]),
+            readableContainer(1.24),
+            buildMapping({ pkField: "namespace", namespaceValue: "ns" }),
+            new Map([["/overview.md", { id: "id-a", pk: "ns" }]]),
+            meter,
+        );
+        expect(await fs.readFile("/overview.md")).toBe("hello");
+        expect(meter.total).toBeCloseTo(1.24, 5);
+    });
+
+    it("adds nothing for structural ops that never reach Cosmos", async () => {
+        const meter = new RuMeter();
+        const fs = new CosmosFs(
+            new DirTree(["overview.md", "query/where.md"]),
+            readableContainer(1),
+            buildMapping({ pkField: "namespace", namespaceValue: "ns" }),
+            new Map(),
+            meter,
+        );
+        await fs.stat("/query");
+        await fs.readdir("/");
+        await fs.exists("/overview.md");
+        expect(meter.total).toBe(0);
     });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type CoarsePlan, planCoarseFilter } from "../../src/grep.js";
+import { type CoarsePlan, grepReadsCorpus, planCoarseFilter } from "../../src/grep.js";
 
 // planCoarseFilter decides whether a grep invocation can push a substring filter
 // down to Cosmos (`contains`) or must fetch all page content and let the real
@@ -102,5 +102,47 @@ describe("planCoarseFilter", () => {
 
     it("stops flag parsing after -- so a dashed literal is still pushed down", () => {
         expect(planCoarseFilter(["-r", "--", "-n", "."])).toEqual(contains("-n"));
+    });
+});
+
+// grepReadsCorpus decides whether a grep run needs the Cosmos coarse fetch at all.
+// When grep only filters piped stdin (no -r, no file operands) the fetch is pure
+// RU waste, so this must return false there — but stay conservative (true) whenever
+// grep might read the corpus, or dropping content would break output.
+describe("grepReadsCorpus", () => {
+    it("is false for a stdin-only filter (cat x | grep y, find | grep y)", () => {
+        expect(grepReadsCorpus(["vector"])).toBe(false);
+        expect(grepReadsCorpus(["-n", "vector"])).toBe(false);
+        expect(grepReadsCorpus(["-in", "Vector"])).toBe(false);
+    });
+
+    it("is true with -r / -R / --recursive (reads the corpus tree)", () => {
+        expect(grepReadsCorpus(["-r", "vector", "."])).toBe(true);
+        expect(grepReadsCorpus(["-rn", "vector", "."])).toBe(true);
+        expect(grepReadsCorpus(["-R", "vector", "."])).toBe(true);
+        expect(grepReadsCorpus(["--recursive", "vector", "."])).toBe(true);
+    });
+
+    it("is true when a file operand is present (grep pattern file.md)", () => {
+        expect(grepReadsCorpus(["vector", "overview.md"])).toBe(true);
+        expect(grepReadsCorpus(["-n", "vector", "a.md", "b.md"])).toBe(true);
+    });
+
+    it("does not mistake a value-taking flag's value for a file operand", () => {
+        expect(grepReadsCorpus(["-A", "3", "vector"])).toBe(false); // -A 3, then stdin
+        expect(grepReadsCorpus(["-A3", "vector"])).toBe(false); // bundled value
+        expect(grepReadsCorpus(["-m", "1", "vector"])).toBe(false);
+        expect(grepReadsCorpus(["--after-context", "2", "vector"])).toBe(false);
+    });
+
+    it("treats the first positional after -e/-f as a file operand (pattern came from the flag)", () => {
+        expect(grepReadsCorpus(["-e", "vector"])).toBe(false); // pattern only, stdin
+        expect(grepReadsCorpus(["-e", "vector", "overview.md"])).toBe(true); // now a file operand
+        expect(grepReadsCorpus(["-f", "pats.txt"])).toBe(false);
+    });
+
+    it("honors -- then counts the following tokens as operands", () => {
+        expect(grepReadsCorpus(["--", "vector"])).toBe(false); // just the pattern
+        expect(grepReadsCorpus(["--", "vector", "file.md"])).toBe(true); // pattern + operand
     });
 });

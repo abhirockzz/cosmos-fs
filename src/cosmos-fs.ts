@@ -2,6 +2,7 @@ import { posix } from "node:path";
 import type { Container } from "@azure/cosmos";
 import type { FileContent, FsStat, IFileSystem } from "just-bash";
 import { getField, type ReaderMapping } from "./mapping.js";
+import type { RuMeter } from "./ru.js";
 import type { DirTree, PointRef } from "./tree.js";
 
 const DIR_MODE = 0o755;
@@ -34,6 +35,7 @@ export class CosmosFs implements IFileSystem {
         private readonly container: Container,
         private readonly mapping: ReaderMapping,
         private readonly refs: Map<string, PointRef>,
+        private readonly meter?: RuMeter,
     ) { }
 
     private norm(p: string): string {
@@ -152,8 +154,9 @@ export class CosmosFs implements IFileSystem {
         if (!this.tree.isFile(abs) || ref === undefined) {
             throw new Error(`ENOENT: no such file or directory, open '${p}'`);
         }
-        const { resource } = await this.container.item(ref.id, ref.pk).read();
-        const content = getField(resource, this.mapping.contentField);
+        const response = await this.container.item(ref.id, ref.pk).read();
+        this.meter?.add(response.requestCharge);
+        const content = getField(response.resource, this.mapping.contentField);
         if (content === null || content === undefined) {
             // Tree lists it as a file but the item has no content: treat as missing.
             throw new Error(`ENOENT: no such file or directory, open '${p}'`);

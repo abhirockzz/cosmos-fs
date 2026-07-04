@@ -2,6 +2,7 @@ import { posix } from "node:path";
 import type { Container } from "@azure/cosmos";
 import { Bash, type Command, defineCommand, InMemoryFs, latin1FromBytes } from "just-bash";
 import { type ReaderMapping, scopeParts } from "./mapping.js";
+import type { RuMeter } from "./ru.js";
 import type { DirTree } from "./tree.js";
 
 /**
@@ -120,11 +121,92 @@ export function planCoarseFilter(args: string[]): CoarsePlan {
     return { mode: "contains", needle, caseInsensitive };
 }
 
+// Short flags that consume the following token as their value, so the value is
+// not mistaken for a file operand when deciding whether grep reads the corpus.
+const SHORT_VALUE_TAKERS = new Set(["A", "B", "C", "m", "d", "D"]);
+// Long flags that take a value as a SEPARATE token (so the next token is skipped).
+const LONG_VALUE_TAKERS = new Set([
+    "--after-context", "--before-context", "--context", "--max-count", "--color",
+    "--colour", "--group-separator", "--devices", "--binary-files", "--label",
+]);
+
+/**
+ * Does this grep read the corpus (files), or only stdin? grep reads the corpus
+ * when given `-r`/`-R` (or `--recursive`) or one or more file operands; otherwise
+ * it filters piped stdin. When it only reads stdin (e.g. `cat x | grep y`,
+ * `find . | grep y`), the Cosmos coarse fetch is pure waste, so the caller can
+ * skip it. `-e`/`-f` supply the pattern, so the first positional then counts as a
+ * file operand. Conservative: any ambiguity resolves to "reads the corpus" so we
+ * never drop content grep would actually need.
+ */
+export function grepReadsCorpus(args: string[]): boolean {
+    let afterDoubleDash = false;
+    let patternFromFlag = false; // -e/-f already gave the pattern
+    let sawPositionalPattern = false;
+    let operandCount = 0; // non-flag tokens that are not the pattern (file operands)
+
+    for (let i = 0; i < args.length; i++) {
+        const token = args[i] as string;
+        if (!afterDoubleDash && token === "--") {
+            afterDoubleDash = true;
+            continue;
+        }
+        const isFlag = !afterDoubleDash && token.length > 1 && token.startsWith("-");
+        if (!isFlag) {
+            if (patternFromFlag || sawPositionalPattern) {
+                operandCount++;
+            } else {
+                sawPositionalPattern = true; // this positional is the pattern
+            }
+            continue;
+        }
+        if (token.startsWith("--")) {
+            const eq = token.indexOf("=");
+            const name = eq === -1 ? token : token.slice(0, eq);
+            if (name === "--recursive" || name === "--dereference-recursive") {
+                return true;
+            }
+            if (name === "--regexp" || name === "--file") {
+                patternFromFlag = true;
+                if (eq === -1) {
+                    i++; // pattern/file is the next token
+                }
+            } else if (LONG_VALUE_TAKERS.has(name) && eq === -1) {
+                i++; // skip the separate value token
+            }
+            continue;
+        }
+        // Short-flag group, e.g. -rn, -A, -e, -A3.
+        const chars = token.slice(1);
+        for (let j = 0; j < chars.length; j++) {
+            const ch = chars[j] as string;
+            if (ch === "r" || ch === "R") {
+                return true;
+            }
+            if (ch === "e" || ch === "f") {
+                patternFromFlag = true;
+                if (j === chars.length - 1) {
+                    i++; // value is the next token
+                }
+                break; // rest of the group is this flag's value
+            }
+            if (SHORT_VALUE_TAKERS.has(ch)) {
+                if (j === chars.length - 1) {
+                    i++; // value is the next token
+                }
+                break; // rest of the group is this flag's value
+            }
+        }
+    }
+    return operandCount > 0;
+}
+
 /** Fetch `{ absPath -> content }` for the pages a grep run needs. */
 async function fetchContent(
     container: Container,
     mapping: ReaderMapping,
     plan: CoarsePlan,
+    meter?: RuMeter,
 ): Promise<Map<string, string>> {
     const { conditions, parameters, partitionKey } = scopeParts(mapping);
     if (plan.mode === "word") {
@@ -161,9 +243,11 @@ async function fetchContent(
     const query = `SELECT c.id, ${mapping.keyExpr} AS k, ${mapping.contentExpr} AS content FROM c${where}`;
     const feedOptions = partitionKey !== undefined ? { partitionKey } : {};
 
-    const { resources } = await container.items
+    const response = await container.items
         .query<{ id: string; k?: string; content?: string }>({ query, parameters }, feedOptions)
         .fetchAll();
+    meter?.add(response.requestCharge);
+    const { resources } = response;
     const byPath = new Map<string, string>();
     for (const row of resources) {
         // Same key fallback as the tree/index so grep's paths line up with `ls`.
@@ -192,11 +276,19 @@ export function createGrepCommand(
     container: Container,
     mapping: ReaderMapping,
     tree: DirTree,
+    meter?: RuMeter,
 ): Command {
     const files = tree.filePaths();
     return defineCommand("grep", async (args, ctx) => {
         const plan = planCoarseFilter(args);
-        const content = await fetchContent(container, mapping, plan);
+        // When grep will only read piped stdin (no -r, no file operands), it never
+        // touches the corpus, so the Cosmos coarse fetch would be pure cost. Skip
+        // it and seed an empty fs; the built-in grep filters the stdin in memory.
+        // This is what makes `cat x | grep y` and `find . | grep y` cost only the
+        // upstream command (or nothing), instead of a full coarse query.
+        const content = grepReadsCorpus(args)
+            ? await fetchContent(container, mapping, plan, meter)
+            : new Map<string, string>();
 
         const mem = new InMemoryFs();
         for (const abs of files) {
