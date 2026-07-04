@@ -12,3 +12,6 @@ internal/
 # Bun compile artifacts
 *.bun-build
 .impeccable/
+
+# Agent scenario eval scratchpad (local only)
+evals/
