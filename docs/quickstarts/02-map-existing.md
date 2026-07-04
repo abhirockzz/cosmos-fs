@@ -80,7 +80,9 @@ so a leftover value would filter on a field these items don't have and return no
 
 ## 3. Bind the fields and explore
 
-Tell cosmos-fs which field is the content and which is the key:
+Tell cosmos-fs which field is the content and which is the key. Only two of the three roles
+are bound here — there's no `--namespace-field` — so the query scans the whole container and
+returns every item across both categories. Step 4 adds the namespace to scope it:
 
 ```bash
 cosmos-fs --content-field body --key-field docpath -c "find . -type f | sort"
@@ -144,9 +146,11 @@ cosmos-fs --content-field body --key-field docpath \
 ./reference/limits.md
 ```
 
-The `internal` runbooks are gone. Because the scope is the real partition key, this query
-hits a single partition (lower cost). Scanning the whole container in step 3 is a
-cross-partition query, which still works but costs more.
+The `internal` runbooks are gone. Because `category` is the container's real partition key,
+this query hits a single partition (lower cost). That single-partition win only happens when
+`--namespace-field` names the real partition key; bound to any other field the scope still
+filters correctly but runs cross-partition. Scanning the whole container in step 3 is
+likewise a cross-partition query, which still works but costs more.
 
 ## 5. Stop repeating the flags
 

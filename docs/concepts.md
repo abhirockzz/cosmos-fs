@@ -6,18 +6,36 @@ whole documents.
 
 ## The three roles
 
-cosmos-fs reads each item through three roles. Only the first is required; the others are
-optional and fall back sensibly.
+cosmos-fs reads each item through three roles. Only `content` is required; `key` and
+`namespace` are optional and fall back sensibly.
 
 | Role | Required | What it is |
 | --- | --- | --- |
-| `content` | Yes | The text that `cat` returns and `grep` searches. |
-| `key` | No | The item's address. Its `/`-separated value builds the browsable tree and is what `cat` opens. Unset: the item's `id` is used, so the tree is flat. |
-| `namespace` | No | A scope, usually the container's partition key, so one container can hold several independent document sets. Unset: the whole container is in scope. |
+| `content` | Yes | The text that `cat` returns and `grep` searches. If the bound field is missing on an item, `cat` reports that path as not found (`ENOENT`). |
+| `key` | No | The item's address. Its `/`-separated value builds the browsable tree and is what `cat` opens. When an item has no value in the key field, that item falls back to its `id` (a flat entry). |
+| `namespace` | No | A scope for filtering, usually the container's partition key, so one container can hold several independent document sets. Applied only when you supply a value; otherwise the whole container is in scope. |
+
+## Binding roles to fields
 
 Roles are not fixed field names. In the canonical schema the fields are literally
-`content` / `key` / `namespace`, but you can bind the roles to whatever fields your data
-already uses (see the two doors next).
+`content` / `key` / `namespace`, but you **bind** each role to whatever field your data
+already uses — with a flag, an env var, or the default. Nothing is rewritten.
+
+| Role | Flag | Env var | Default field | When unset |
+| --- | --- | --- | --- | --- |
+| content | `--content-field` | `COSMOS_FS_CONTENT_FIELD` | `content` | reads the `content` field |
+| key | `--key-field` | `COSMOS_FS_KEY_FIELD` | `key` | reads the `key` field; per item, a missing value falls back to `id` |
+| namespace field | `--namespace-field` | `COSMOS_FS_NAMESPACE_FIELD` | `namespace` | the field the scope *filters on* |
+| namespace value | `--namespace` | `COSMOS_FS_NAMESPACE` | *(none)* | no value ⇒ no filter, whole container in scope |
+
+Flags override env vars, which override the defaults. Field paths may be nested
+(`metadata.source`) and must be identifier-safe (letters, digits, `_`).
+
+**The rule that drives cost:** a namespace scope becomes a cheap single-partition query
+*only* when the field you bind it to is the container's real partition key. Bind it to any
+other field and the filter still returns the right items — it just runs cross-partition
+(more RU). cosmos-fs detects the real partition key automatically, and `info` reports
+`single partition` or `cross-partition` so you can see which one you got.
 
 ## Two doors to get data cosmos-fs can read
 

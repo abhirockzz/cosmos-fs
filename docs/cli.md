@@ -14,7 +14,8 @@ cosmos-fs? [concepts.md](concepts.md) explains the model.
   optional `COSMOS_DATABASE`, `COSMOS_CONTAINER`, `COSMOS_FS_NAMESPACE`. Copy `.env.example`
   to `.env` to start.
 - To explore an *existing* container whose fields differ, add `--content-field`,
-  `--key-field`, and/or `--namespace-field` (see `--help` and
+  `--key-field`, and/or `--namespace-field` (see the
+  [binding reference](concepts.md#binding-roles-to-fields), `--help`, and
   [ingest.md](ingest.md#explore-an-existing-container-field-mapping-no-re-ingest)).
 - Build the binary: `pnpm install && pnpm build` puts the entry at `dist/cli.js` (`npm link`
   to expose it as `cosmos-fs`). For development, `pnpm cli` runs the source via tsx.

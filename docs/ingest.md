@@ -38,6 +38,9 @@ cosmos-fs --container my-vectors \
   is no separate scope). The container's partition key is detected automatically.
 - `--namespace-field <field>` sets which field the `--namespace` value filters on (default
   `namespace`), for stores that scope by a custom field.
+- A namespace scope is a cheap single-partition query only when `--namespace-field` names
+  the container's real partition key; bound to any other field it still filters correctly
+  but runs cross-partition. See the [binding reference](concepts.md#binding-roles-to-fields).
 
 The reader always keeps a startup `key → id` index, so `cat` stays a ~1-RU point read even
 when your `key` is not the `id`. Two cost notes (both still work, just cost more): if the
