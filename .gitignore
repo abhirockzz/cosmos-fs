@@ -17,3 +17,6 @@ internal/
 evals/
 
 agent-skill-test-manual/
+
+.rulab/
+skill-eval/

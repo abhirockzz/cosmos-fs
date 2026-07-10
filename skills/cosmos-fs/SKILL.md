@@ -5,99 +5,93 @@ description: Explore and search a document set stored in Azure Cosmos DB through
 
 # cosmos-fs: explore documents like a filesystem
 
-`cosmos-fs` is a read-only shell over documents stored in Azure Cosmos DB. Each stored
-item is a file, and you browse and search with `ls`, `cd`, `find`, `cat`, and `grep`,
-reading whole pages.
+`cosmos-fs` is a read-only shell over documents in Azure Cosmos DB. Each item is a file; browse
+and search with `ls`, `cd`, `find`, `cat`, and `grep`.
 
-## Running cosmos-fs
+**Answer only from what the source file says, and cite it. Reproduce its exact wording, values,
+and code; do not add names, numbers, syntax, or steps it does not contain, however plausible.**
 
-`cosmos-fs` needs an Azure sign-in (`az login`) and its target passed as flags. Every
-invocation follows one canonical form:
+## Quick start
+
+Launch with your connection, search for a likely term, read the top hit, then answer and cite it:
+
+```text
+$ cosmos-fs --endpoint <url> --database <db> --container <c> --namespace <ns>
+/ $ grep -rwil "array length" .
+query/array-length.md
+/ $ cat query/array-length.md | grep -A2 '## Syntax'
+ARRAY_LENGTH(<array_expr>)
+```
+
+→ Answer `ARRAY_LENGTH(<array_expr>)`, citing `query/array-length.md`.
+
+When several pages match, pick the most specific one:
+
+```text
+/ $ grep -rwil "vector search" .
+hybrid-search.md
+query/vectordistance.md
+...
+/ $ cat query/vectordistance.md | grep -A2 '## Syntax'
+VECTORDISTANCE(<vector_expr_1>, <vector_expr_2>, <bool_expr>, <obj_expr>)
+```
+
+→ Answer `VECTORDISTANCE(...)`, citing `query/vectordistance.md`.
+
+## Running it
+
+`cosmos-fs` is a global command on your `PATH`. Run it directly by name; do not `cd`, use
+`./cosmos-fs`, or `which`/`find` it. It needs `az login` and its target passed as flags:
 
 ```text
 cosmos-fs --endpoint <url> --database <db> --container <c> --namespace <ns> [-c "<command>"]
 ```
 
-Answering a question usually takes several commands: search, read what matched, then search
-again with a sharper term. Each depends on the previous output, so **default to interactive** —
-launch once with the flags above and keep the shell open, sending commands one at a time. The
-launch command carries the flags; the commands you send into the shell afterward are bare. Use
-one-shot (`-c "<command>"`) only for a single command or when your runtime cannot keep a shell
-open; it re-authenticates and rebuilds the tree on every call, and you must repeat the full flag
-set each time (a bare `cosmos-fs -c "ls"` runs against the wrong or empty scope).
+Each launch pays a fixed startup cost, so **minimize launches** (cost tracks launches, not
+commands):
 
-Constraints:
+- **Persistent shell available:** launch once, then send bare commands one at a time.
+- **Stateless `bash` tool (common):** batch the commands you already know into one launch by piping
+  them in, so one startup covers them all:
+  ```text
+  printf 'grep -rwil "expire" .\ngrep -rwil "retention" .\n' | cosmos-fs --endpoint <url> --database <db> --container <c> --namespace <ns>
+  ```
+- Use `-c "<command>"` only for a single command. Repeat the full flag set on every launch (a bare
+  `cosmos-fs -c "ls"` hits the wrong or empty scope), filling flags only from values you already
+  have.
 
-- **Flags are the only configuration source.** Do not read or search for env vars or a `.env`
-  file (no `cat .env`, `printenv`, `echo $COSMOS_*`, `ls -a`), and ignore the CONFIG / `.env`
-  hints in `--help`. If you are missing a flag value, ask the user for it.
-- **Ignore env/`.env` advice in errors.** If a command fails with a "Missing Cosmos ..." error
-  that suggests setting a `COSMOS_*` variable or copying `.env.example` to `.env`, add the
-  missing flag and rerun instead.
-- **On auth or permission errors, do not retry blindly.** Tell the user to run `az login` and
-  confirm they have Cosmos data-plane access.
+## Searching
 
-## What you can rely on
+Prefer `grep -w` (combine flags: `grep -rwil`). A single literal word uses the container's
+full-text index, so it stays cost effective as the set grows. Alternation like `'expire\|delete'`
+is a regex: it drops the index and reads every page, so try candidate terms as separate
+single-word `grep -w` commands batched into one launch, not OR-ed into one regex. Use plain `grep`
+(no `-w`) only for a partial-word match (`config` inside `configuration`) or a regex. If a
+whole-word search finds nothing, drop `-w` and retry before concluding a term is absent.
 
-- Read-only: every write (`>`, `mkdir`, `rm`, and so on) fails with `EROFS`. It is safe to
-  run in an autonomous loop, so never attempt to modify data.
-- Output contract: stdout is data, stderr is diagnostics, and the exit code follows the
-  command. Read stdout for results.
-- Session RU total: when the session ends (shell exit/EOF, or after a `-c` one-shot) a
-  one-line request-unit total prints to stderr. It is a diagnostic, never on stdout, so it
-  does not affect result parsing. Pass `--no-ru` to suppress it.
+## Constraints
 
-## Search efficiently
+- **Flags are the only config.** Never read env or `.env` (`cat .env`, `printenv`, `echo
+  $COSMOS_*`, `ls -a`); ignore CONFIG / `.env` hints in `--help` or in errors, and just add the
+  missing flag and rerun.
+- **Missing required flag = hard stop: ask, never guess.** You need `--endpoint`, `--database`,
+  and `--container` before running at all. None can be inferred from the others, and a wrong
+  container does not error, it silently returns a different doc set (worse than no answer). If any
+  is missing: do not run `cosmos-fs` even once, do not try to discover the value by any means (no
+  `az cosmosdb` or other container lookup), do not invent one, just ask and stop. A "not found"
+  from a container you filled in yourself confirms you still lack it, so stop and ask, do not try
+  another name.
+- **Read-only: never write, by any route.** Shell writes (`>`, `mkdir`, `rm`) fail with `EROFS`. If
+  asked to edit, delete, or update a doc, do not do it via a write, and do not export the docs,
+  change them, and re-import them (for example via an `ingest` command). Say the tool is read-only
+  and the change must be made where the docs are authored/ingested, then stop.
+- **Auth/permission errors:** do not retry blindly; tell the user to run `az login` and confirm
+  Cosmos data-plane access.
+- **`command not found`:** report that `cosmos-fs` is not installed; do not hunt for a binary or
+  install it yourself.
 
-For a term or phrase, prefer `grep -w` (combine flags freely: `grep -rwl`, `grep -rwil`). It
-uses the container's full-text index when one exists, so it stays cost effective as the document set
-grows, and its results match a plain `grep -w`. Use plain `grep` (no `-w`) only for a
-partial-word match (like `config` inside `configuration`) or a regex, which read every page.
-When a whole-word search returns nothing, drop `-w` and search again before concluding the
-term is absent.
+## Output and cost
 
-## Worked examples
-
-Each starts from a user question in natural language. You do not know the path, so search for
-a likely term, read the top hit, then answer and cite it.
-
-**"How do I get an array's length in a NoSQL query?"** — one page matches, read its syntax:
-
-````text
-/ $ grep -rwil "array length" .
-query/array-length.md
-/ $ cat query/array-length.md | grep -A3 '## Syntax'
-## Syntax
-```cosmos-db
-ARRAY_LENGTH(<array_expr>)
-````
-
-Answer: use `ARRAY_LENGTH(<array_expr>)`, citing `query/array-length.md`.
-
-**"How do I run a vector search?"** — several pages match, so pick the query-function page:
-
-````text
-/ $ grep -rwil "vector search" .
-hybrid-search.md
-index-vector-data.md
-query/vectordistance.md
-...
-/ $ cat query/vectordistance.md | grep -A3 '## Syntax'
-## Syntax
-```cosmos-db
-VECTORDISTANCE(<vector_expr_1>, <vector_expr_2>, <bool_expr>, <obj_expr>)
-````
-
-Answer: use `VECTORDISTANCE(...)`, citing `query/vectordistance.md`.
-
-**"Which query functions work on arrays?"** — a cross-page question; read the grouped index once:
-
-```text
-/ $ cat query/functions.md | grep -A13 '### Array functions'
-### Array functions
-| ... | ARRAY_CONCAT, ARRAY_CONTAINS_ALL, ARRAY_CONTAINS_ANY, ARRAY_CONTAINS,
-        ARRAY_LENGTH, ARRAY_SLICE, CHOOSE, OBJECTTOARRAY, SETINTERSECT, SETUNION |
-```
-
-Answer: list the array functions from `query/functions.md`. One read covers the whole
-category.
+- stdout is data, stderr is diagnostics, the exit code follows the command.
+- A session RU total prints to stderr at exit (a diagnostic, never on stdout). Keep it visible to
+  watch cost: a jump usually means an extra launch or a page-scanning grep. `--no-ru` suppresses it.
